@@ -1,13 +1,13 @@
 #!/bin/bash
 # Builds the app, copies your video into place, and starts it now + at every login.
-# Uses ./wallpaper.mov unless you pass a different video.
+# Uses ./sample.mov unless you pass a different video.
 #
-#   ./install.sh                          # uses ./wallpaper.mov
+#   ./install.sh                          # uses ./sample.mov
 #   ./install.sh ~/Downloads/other.mov    # use a different video
 set -euo pipefail
 cd "$(dirname "$0")"
 
-VIDEO="${1:-wallpaper.mov}"
+VIDEO="${1:-sample.mov}"
 if [[ -z "$VIDEO" || ! -f "$VIDEO" ]]; then
     echo "usage: ./install.sh /path/to/video.mov" >&2
     exit 1
@@ -32,8 +32,11 @@ launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true
 mkdir -p "$HOME/Applications" "$DATA" "$HOME/Library/LaunchAgents" "$LOG_DIR"
 rm -rf "$APP_DST"
 cp -R build/LiveWallpaper.app "$APP_DST"
+# Copy the new video in before removing the old one. That way, reinstalling
+# with the already-installed video as the path can't delete it.
+cp "$VIDEO" "$DATA/.incoming.$EXT"
 rm -f "$DATA"/wallpaper.*
-cp "$VIDEO" "$VIDEO_DST"
+mv "$DATA/.incoming.$EXT" "$VIDEO_DST"
 
 # Remove the log older versions wrote to /tmp. This fails harmlessly if
 # another user owns a file with that name.

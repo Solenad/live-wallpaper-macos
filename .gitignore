@@ -1,2 +1,8 @@
 build/
 .DS_Store
+
+# Keep your own videos out of git. sample.mov is the only tracked clip.
+*.mov
+*.mp4
+*.m4v
+!sample.mov

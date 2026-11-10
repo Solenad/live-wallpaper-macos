@@ -45,10 +45,14 @@ the folder.
 From Terminal, while logged in to your Mac (not over SSH):
 
 ```bash
-./install.sh                              # uses ./wallpaper.mov in this folder
-./install.sh wallpaper-lockscreen.mov     # another clip from this repo
+./install.sh                              # uses ./sample.mov in this folder
 ./install.sh ~/Downloads/my-video.mp4     # or any video of your own
 ```
+
+`sample.mov` is a short placeholder clip that loops. To use your own video,
+pass its path as shown above, or replace `sample.mov` with your video under
+the same name. Other `.mov`, `.mp4` and `.m4v` files in this folder are
+git-ignored, so your videos won't get committed by accident.
 
 You should see:
 
@@ -56,6 +60,7 @@ You should see:
 Built build/LiveWallpaper.app
 Installed. LiveWallpaper is running and will start at login.
 Video: /Users/you/Library/Application Support/LiveWallpaper/wallpaper.mov
+Log:   /Users/you/Library/Logs/LiveWallpaper.log
 ```
 
 The video starts playing on your desktop right away.
@@ -77,7 +82,7 @@ The video starts playing on your desktop right away.
 | `~/Applications/LiveWallpaper.app` | The app (compiled locally and ad-hoc signed) |
 | `~/Library/Application Support/LiveWallpaper/wallpaper.<ext>` | A copy of your video |
 | `~/Library/LaunchAgents/local.livewallpaper.plist` | Starts the app at login and restarts it if it crashes |
-| `/tmp/livewallpaper.log` | Log output |
+| `~/Library/Logs/LiveWallpaper.log` | Log output, readable only by your account |
 
 The installer also leaves a build copy in `./build/`, which is git-ignored.
 
@@ -92,8 +97,13 @@ git pull && ./install.sh                  # update to the latest code
 ```
 
 > **Note:** If you run `./install.sh` without a path, it always uses
-> `./wallpaper.mov` from this folder and replaces whatever video you had
-> before. To keep a custom video when you update, pass its path again.
+> `./sample.mov` from this folder and replaces whatever video you had
+> before. To keep your current video when you update, pass its path again.
+> The installed copy works too:
+>
+> ```bash
+> ./install.sh ~/Library/Application\ Support/LiveWallpaper/wallpaper.mov
+> ```
 
 ### Building without installing
 
@@ -119,7 +129,7 @@ Press `Ctrl-C` in Terminal to stop it.
 - **`launchctl bootstrap` fails**: run the installer from Terminal in your
   logged-in desktop session. The LaunchAgent only loads in the GUI session,
   so it won't load over SSH.
-- **Desktop isn't moving**: look at `/tmp/livewallpaper.log`. If the video
+- **Desktop isn't moving**: look at the [log](#logs). If the video
   won't play, convert it to HEVC (see [Video tips](#video-tips)).
 
 ## Use
@@ -153,8 +163,7 @@ Press `Ctrl-C` in Terminal to stop it.
 ./uninstall.sh
 ```
 
-This stops the app and removes the app, the LaunchAgent, and the copied
-video, which are the first three paths listed under
+This stops the app and removes everything listed under
 [What gets installed](#what-gets-installed). Your normal wallpaper shows again
 right away. You can then delete the cloned folder.
 
@@ -167,4 +176,13 @@ right away. You can then delete the cloned folder.
 
 ## Logs
 
-`/tmp/livewallpaper.log`
+`~/Library/Logs/LiveWallpaper.log`. Open it in Console.app (under **Log
+Reports**), or follow it from Terminal:
+
+```bash
+tail -f ~/Library/Logs/LiveWallpaper.log
+```
+
+Versions before this change wrote the log to `/tmp/livewallpaper.log`, where
+other accounts on the Mac could read it. Running `install.sh` again moves
+logging to the new location and deletes the old file.
