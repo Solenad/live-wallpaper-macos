@@ -69,13 +69,47 @@ final class WallpaperController: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         player.isMuted = true
         player.preventsDisplaySleepDuringVideoPlayback = false
-        looper = AVPlayerLooper(player: player, templateItem: AVPlayerItem(url: videoURL))
+        startLooping()
 
         buildWindows()
         buildStatusItem()
         observeSystem()
         updatePlayback()
         log("started with \(videoURL.path) on \(windows.count) screen(s); lock-screen refresh \(refreshEnabled ? "on" : "off"); keep display on when locked: \(keepAwakeDescription)")
+    }
+
+    // MARK: Looping
+
+    // Loop only the part of the file that has picture. Some exporters and upscalers leave
+    // an empty stretch (an "empty edit") at the start or end of the video track. Looping
+    // the whole file would show the black window behind it there, a blink on every loop.
+    private func startLooping() {
+        let asset = AVURLAsset(url: videoURL)
+        Task {
+            let range = await Self.pictureRange(of: asset)
+            let duration = (try? await asset.load(.duration)) ?? .invalid
+            looper = AVPlayerLooper(
+                player: player, templateItem: AVPlayerItem(asset: asset),
+                timeRange: range ?? .invalid)
+            if isPlaying { player.play() }
+
+            if let range, duration.isValid,
+               range.start > .zero || range.end < duration {
+                log(String(format: "looping %.3fs–%.3fs of %.3fs (skipping empty video frames)",
+                           range.start.seconds, range.end.seconds, duration.seconds))
+            }
+        }
+    }
+
+    /// From the start of the video track's first non-empty edit to the end of its last.
+    /// nil if that can't be read; the caller then loops the whole file.
+    private static func pictureRange(of asset: AVURLAsset) async -> CMTimeRange? {
+        guard let track = try? await asset.loadTracks(withMediaType: .video).first,
+              let segments = try? await track.load(.segments) else { return nil }
+        let filled = segments.filter { !$0.isEmpty }.map(\.timeMapping.target)
+        guard let first = filled.first, let last = filled.last,
+              last.end > first.start else { return nil }
+        return CMTimeRange(start: first.start, end: last.end)
     }
 
     // MARK: Windows
